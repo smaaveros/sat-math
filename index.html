@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SAT Math Simulation</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --ink:#1d2733; --muted:#5b6b7b;
+    --line:#dfe5ec; --accent:#2f6fed; --accent-d:#234fb0;
+    --good:#1f9d57; --bad:#d23b3b; --warn:#b8860b;
+    --shadow:0 1px 3px rgba(20,40,70,.08),0 6px 20px rgba(20,40,70,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:860px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    box-shadow:var(--shadow);padding:24px;margin:16px 0}
+  h1{font-size:1.5rem;margin:.2em 0}
+  h2{font-size:1.2rem;margin:.2em 0}
+  p{margin:.6em 0}
+  .muted{color:var(--muted)}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
+    background:#fff;padding:10px 16px;transition:.15s}
+  button:hover{border-color:#c4cdd8}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .btn-primary:hover{background:var(--accent-d);border-color:var(--accent-d)}
+  .btn-ghost{background:transparent}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .spread{justify-content:space-between}
+  .grow{flex:1}
+
+  /* exam header */
+  .bar{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+  .bar .wrap{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+  .modtag{font-weight:700}
+  .timer{font-variant-numeric:tabular-nums;font-weight:700;font-size:1.15rem;
+    padding:4px 12px;border-radius:999px;background:#eef3ff;color:var(--accent-d)}
+  .timer.low{background:#fdeaea;color:var(--bad)}
+
+  /* question */
+  .qmeta{font-size:.82rem;color:var(--muted);margin-bottom:8px;
+    display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pill{background:#eef2f7;border-radius:999px;padding:2px 10px}
+  .stem{font-size:1.06rem}
+  .stem svg{max-width:100%;height:auto}
+  .stem img{max-width:100%;height:auto}
+  .stem table{border-collapse:collapse;margin:8px 0}
+  .stem table td,.stem table th{border:1px solid var(--line);padding:6px 10px}
+  /* College Board figure transcripts are screen-reader-only: keep them for accessibility but hide visually (the SVG/graph is what's shown) */
+  .sr-only{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .choices{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+  .choice{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);
+    border-radius:10px;padding:12px 14px;cursor:pointer;background:#fff}
+  .choice:hover{border-color:#bcd0ff;background:#fafcff}
+  .choice.sel{border-color:var(--accent);background:#eef3ff;box-shadow:inset 0 0 0 1px var(--accent)}
+  .choice .ltr{font-weight:700;border:1px solid var(--line);border-radius:50%;
+    width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:0 0 28px}
+  .choice.sel .ltr{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .spr input{font:inherit;padding:12px 14px;border:1px solid var(--line);border-radius:10px;
+    width:220px;max-width:100%}
+  .spr input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px #dfe9ff}
+
+  /* palette */
+  .palette{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .pdot{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:#fff;
+    font-size:.85rem;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .pdot.done{background:#e7f4ec;border-color:#bfe4cd;color:var(--good)}
+  .pdot.cur{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* score */
+  .score-big{font-size:3.4rem;font-weight:800;letter-spacing:-1px;line-height:1}
+  .score-cap{display:inline-block;margin-top:6px;font-size:.9rem}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:600;font-size:.85rem}
+  .badge.hard{background:#eaf1ff;color:var(--accent-d)}
+  .badge.easy{background:#fff3df;color:var(--warn)}
+
+  /* review */
+  .rev{border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+  .rev .tag{font-size:.78rem;color:var(--muted)}
+  .ans{padding:8px 12px;border-radius:8px;margin:6px 0;font-size:.97rem}
+  .ans.correct{background:#e7f4ec;border:1px solid #bfe4cd}
+  .ans.wrong{background:#fdecec;border:1px solid #f2c4c4}
+  .ans.key{background:#eef3ff;border:1px solid #cdddff}
+  .expl{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+  .expl summary{cursor:pointer;font-weight:600;color:var(--accent-d)}
+  .hide{display:none !important}
+  .center{text-align:center}
+  .small{font-size:.88rem}
+  ul.clean{margin:.4em 0;padding-left:1.2em}
+</style>
+</head>
+<body>
+
+<!-- exam top bar (hidden on start/results) -->
+<div id="bar" class="bar hide">
+  <div class="wrap">
+    <div class="modtag" id="barLabel">Module 1</div>
+    <div class="timer" id="timer">35:00</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- START -->
+  <section id="screen-start" class="card">
+    <h1>SAT Math — Full Simulation</h1>
+    <p class="muted" id="loadStatus">Loading question bank…</p>
+    <div id="startBody" class="hide">
+      <p>Two modules, 22 questions each, 35 minutes per module. Your Module 1 performance
+         decides whether Module 2 is the harder version (full path to 800) or the easier
+         version (score capped). A break sits between the modules — you can skip it.</p>
+      <ul class="clean muted small">
+        <li>Multiple-choice and fill-in (student-produced) questions, mixed.</li>
+        <li>Score is reported on the 200–800 scale at the end, with full solutions.</li>
+        <li>Nothing is saved or shared. Refreshing mid-test resumes where you left off (same browser tab).</li>
+      </ul>
+      <div class="row" style="margin-top:14px">
+        <button class="btn-primary" id="btnStart">Start simulation</button>
+        <button class="btn-ghost hide" id="btnResume">Resume in-progress test</button>
+      </div>
+      <p class="small muted" id="poolInfo"></p>
+    </div>
+  </section>
+
+  <!-- QUESTION -->
+  <section id="screen-q" class="card hide">
+    <div class="qmeta">
+      <span id="qCounter" class="pill">Question 1 of 22</span>
+      <span id="qDomain" class="pill"></span>
+      <span id="qType" class="pill"></span>
+    </div>
+    <div id="stem" class="stem"></div>
+
+    <div id="choices" class="choices"></div>
+    <div id="sprBox" class="spr hide">
+      <label class="small muted" for="sprInput">Enter your answer</label><br/>
+      <input id="sprInput" type="text" autocomplete="off" inputmode="text" />
+    </div>
+
+    <div class="row spread" style="margin-top:18px">
+      <button id="btnPrev" class="btn-ghost">← Previous</button>
+      <button id="btnNext" class="btn-primary">Next →</button>
+    </div>
+
+    <div style="margin-top:18px">
+      <div class="small muted">Jump to question</div>
+      <div id="palette" class="palette"></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button id="btnSubmitModule" class="btn-primary">Submit module</button>
+      <span class="small muted">Unanswered questions are marked wrong.</span>
+    </div>
+  </section>
+
+  <!-- BREAK -->
+  <section id="screen-break" class="card center hide">
+    <h2>Module 1 complete</h2>
+    <p class="muted">Take a short break. Module 2 begins when the timer ends or when you choose to continue.</p>
+    <div class="score-big" id="breakTimer">10:00</div>
+    <div class="row center" style="justify-content:center;margin-top:18px">
+      <button class="btn-primary" id="btnContinue">Begin Module 2 now</button>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="screen-results" class="hide">
+    <div class="card center">
+      <div class="muted small">Your SAT Math score</div>
+      <div class="score-big" id="resScore">—</div>
+      <div class="score-cap">
+        <span id="resPath" class="badge">—</span>
+      </div>
+      <p class="muted small" id="resBreakdown"></p>
+      <p class="small" id="resPathNote"></p>
+      <div class="row center" style="justify-content:center;margin-top:10px">
+        <button class="btn-primary" id="btnRestart">Start a new simulation</button>
+        <button class="btn-ghost" id="btnToggleReview">Show / hide solutions</button>
+      </div>
+    </div>
+    <div id="review"></div>
+  </section>
+
+  <p class="center small muted">SAT practice tool · questions from the College Board educator question bank · for classroom practice only</p>
+</div>
+
+<script src="engine.js"></script>
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] },
+    startup: { typeset: false }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js" id="MathJax-script" async></script>
+
+<script>
+(function(){
+  "use strict";
+  var E = window.SATEngine;
+  var DATA_URL = "sat-math-questions.json";
+  var MODULE_SECONDS = 35*60;
+  var BREAK_SECONDS = 10*60;
+  var SKEY = "sat-sim-state-v1";
+
+  var byId = {};      // uid -> question
+  var pool = [];
+  var state = null;   // run state
+  var tick = null;    // interval
+
+  // ---------- helpers ----------
+  function $(id){ return document.getElementById(id); }
+  function show(id){ $(id).classList.remove("hide"); }
+  function hide(id){ $(id).classList.add("hide"); }
+  function fmt(sec){ sec=Math.max(0,Math.round(sec)); var m=Math.floor(sec/60),s=sec%60;
+    return m+":"+(s<10?"0":"")+s; }
+  function typeset(el){ if(window.MathJax&&MathJax.typesetPromise){ MathJax.typesetPromise([el]).catch(function(){}); } }
+  // Remove College Board's screen-reader figure transcripts (redundant with the visible graph/figure).
+  function stripSR(el){ if(el){ var n=el.querySelectorAll('.sr-only'); for(var i=0;i<n.length;i++) n[i].remove(); } }
+
+  function save(){ if(state){ try{ sessionStorage.setItem(SKEY, JSON.stringify(state)); }catch(e){} } }
+  function clearSave(){ try{ sessionStorage.removeItem(SKEY); }catch(e){} }
+  function load(){ try{ var s=sessionStorage.getItem(SKEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
+
+  function curModuleUids(){ return state.phase==="module2" ? state.m2 : state.m1; }
+  function q(uid){ return byId[uid]; }
+
+  // ---------- boot ----------
+  fetch(DATA_URL).then(function(r){ return r.json(); }).then(function(data){
+    pool = data.questions;
+    pool.forEach(function(it){ byId[it.uid]=it; });
+    $("loadStatus").classList.add("hide");
+    show("startBody");
+    $("poolInfo").textContent = pool.length + " questions loaded · "+
+      (data.meta && data.meta.source ? data.meta.source : "");
+    var saved = load();
+    if(saved && saved.phase && saved.phase!=="results"){
+      show("btnResume");
+    }
+  }).catch(function(err){
+    $("loadStatus").textContent = "Could not load the question bank ("+err+"). "+
+      "If you opened this file directly, run it through a web server or GitHub Pages — browsers block local file loads.";
+  });
+
+  // ---------- start / resume ----------
+  $("btnStart").onclick = function(){ beginNewRun(); };
+  $("btnResume").onclick = function(){ resumeRun(); };
+
+  function beginNewRun(){
+    clearSave();
+    var sim = E.buildSimulation(pool);
+    state = {
+      phase:"module1",
+      m1: sim.module1.map(function(x){return x.uid;}),
+      m2: null,
+      path: null,
+      answers: {},
+      current: 0,
+      timerEnd: Date.now() + MODULE_SECONDS*1000,
+      c1: null, c2: null, score: null
+    };
+    save();
+    enterModule();
+  }
+
+  function resumeRun(){
+    state = load();
+    if(!state){ beginNewRun(); return; }
+    if(state.phase==="module1"||state.phase==="module2"){ enterModule(); }
+    else if(state.phase==="break"){ enterBreak(); }
+    else { beginNewRun(); }
+  }
+
+  // ---------- module flow ----------
+  function enterModule(){
+    hideAll();
+    show("bar"); show("screen-q");
+    $("barLabel").textContent = state.phase==="module2" ? "Module 2" : "Module 1";
+    if(!state.timerEnd || state.timerEnd < Date.now()){
+      // restored after expiry or fresh
+      if(!state.timerEnd) state.timerEnd = Date.now()+MODULE_SECONDS*1000;
+    }
+    startTimer(function(){ submitModule(true); });
+    renderQuestion();
+  }
+
+  function renderQuestion(){
+    var uids = curModuleUids();
+    var n = uids.length;
+    if(state.current<0) state.current=0;
+    if(state.current>=n) state.current=n-1;
+    var item = q(uids[state.current]);
+
+    $("qCounter").textContent = "Question "+(state.current+1)+" of "+n;
+    $("qDomain").textContent = item.domain;
+    $("qType").textContent = item.type==="mcq" ? "Multiple choice" : "Fill-in";
+
+    var stem = $("stem");
+    stem.innerHTML = item.stem || "";
+    stripSR(stem);
+
+    var choicesEl = $("choices");
+    var sprEl = $("sprBox");
+    choicesEl.innerHTML = "";
+    if(item.type==="mcq"){
+      sprEl.classList.add("hide");
+      choicesEl.classList.remove("hide");
+      (item.choices||[]).forEach(function(c){
+        var div = document.createElement("div");
+        div.className = "choice" + (state.answers[item.uid]===c.letter ? " sel":"");
+        div.innerHTML = '<div class="ltr">'+c.letter+'</div><div class="grow">'+c.html+'</div>';
+        div.onclick = function(){
+          state.answers[item.uid]=c.letter; save();
+          Array.prototype.forEach.call(choicesEl.children,function(ch){ch.classList.remove("sel");});
+          div.classList.add("sel");
+          paintPalette();
+        };
+        choicesEl.appendChild(div);
+      });
+    } else {
+      choicesEl.classList.add("hide");
+      sprEl.classList.remove("hide");
+      var inp = $("sprInput");
+      inp.value = state.answers[item.uid] || "";
+      inp.oninput = function(){ state.answers[item.uid]=inp.value; save(); paintPalette(); };
+    }
+
+    stripSR(choicesEl);
+    typeset(stem); typeset(choicesEl);
+    $("btnPrev").disabled = state.current===0;
+    $("btnNext").textContent = state.current===n-1 ? "Last question" : "Next →";
+    paintPalette();
+    window.scrollTo(0,0);
+  }
+
+  function paintPalette(){
+    var uids = curModuleUids();
+    var pal = $("palette"); pal.innerHTML="";
+    uids.forEach(function(uid,i){
+      var d=document.createElement("div");
+      var answered = state.answers[uid]!==undefined && String(state.answers[uid]).trim()!=="";
+      d.className="pdot"+(answered?" done":"")+(i===state.current?" cur":"");
+      d.textContent=i+1;
+      d.onclick=function(){ state.current=i; save(); renderQuestion(); };
+      pal.appendChild(d);
+    });
+  }
+
+  $("btnPrev").onclick=function(){ if(state.current>0){state.current--;save();renderQuestion();} };
+  $("btnNext").onclick=function(){ var n=curModuleUids().length; if(state.current<n-1){state.current++;save();renderQuestion();} };
+
+  $("btnSubmitModule").onclick=function(){
+    var uids=curModuleUids();
+    var unanswered=uids.filter(function(uid){ return state.answers[uid]===undefined||String(state.answers[uid]).trim()===""; }).length;
+    var msg = unanswered>0
+      ? ("You have "+unanswered+" unanswered question(s). Submit this module anyway?")
+      : "Submit this module?";
+    if(confirm(msg)) submitModule(false);
+  };
+
+  function countCorrect(uids){
+    return uids.reduce(function(acc,uid){ return acc + (E.checkAnswer(q(uid), state.answers[uid])?1:0); },0);
+  }
+
+  function submitModule(auto){
+    stopTimer();
+    if(state.phase==="module1"){
+      state.c1 = countCorrect(state.m1);
+      state.path = E.routePath(state.c1);
+      // build module 2 from remaining pool (avoid repeats via used set)
+      var used = new Set(state.m1.concat([]));
+      var m2 = E.buildSecondModule(pool, state.path, used);
+      state.m2 = m2.map(function(x){return x.uid;});
+      state.phase = "break";
+      state.current = 0;
+      save();
+      enterBreak(auto);
+    } else {
+      state.c2 = countCorrect(state.m2);
+      state.score = E.scoreSection(state.path, state.c1, state.c2);
+      state.phase = "results";
+      save();
+      enterResults();
+    }
+  }
+
+  // ---------- break ----------
+  function enterBreak(auto){
+    hideAll();
+    show("screen-break");
+    if(!state.breakEnd || state.breakEnd<Date.now()-BREAK_SECONDS*1000){
+      // set fresh break end if not already running
+    }
+    if(!state.breakEnd) state.breakEnd = Date.now()+BREAK_SECONDS*1000;
+    save();
+    startBreakTimer();
+  }
+
+  $("btnContinue").onclick=function(){ beginModule2(); };
+
+  function beginModule2(){
+    stopTimer();
+    state.phase="module2";
+    state.current=0;
+    state.timerEnd = Date.now()+MODULE_SECONDS*1000;
+    state.breakEnd = null;
+    save();
+    enterModule();
+  }
+
+  // ---------- timers ----------
+  function startTimer(onZero){
+    stopTimer();
+    var el=$("timer");
+    function upd(){
+      var rem=(state.timerEnd-Date.now())/1000;
+      el.textContent=fmt(rem);
+      el.classList.toggle("low", rem<=5*60);
+      if(rem<=0){ stopTimer(); onZero(); }
+    }
+    upd(); tick=setInterval(upd,250);
+  }
+  function startBreakTimer(){
+    stopTimer();
+    var el=$("breakTimer");
+    function upd(){
+      var rem=(state.breakEnd-Date.now())/1000;
+      el.textContent=fmt(rem);
+      if(rem<=0){ stopTimer(); beginModule2(); }
+    }
+    upd(); tick=setInterval(upd,250);
+  }
+  function stopTimer(){ if(tick){clearInterval(tick);tick=null;} }
+
+  // ---------- results ----------
+  function enterResults(){
+    stopTimer(); hideAll(); show("screen-results");
+    $("resScore").textContent = state.score;
+    var pathEl=$("resPath");
+    if(state.path==="hard"){
+      pathEl.textContent="Harder Module 2 (full 800 path)";
+      pathEl.className="badge hard";
+      $("resPathNote").textContent="You routed into the harder second module, so the full 200–800 range was available.";
+    } else {
+      pathEl.textContent="Easier Module 2 (score capped ~620)";
+      pathEl.className="badge easy";
+      $("resPathNote").textContent="Module 1 routed you into the easier second module, which caps the section score at about 620. Stronger Module 1 performance unlocks the harder module and the path to 800.";
+    }
+    $("resBreakdown").textContent =
+      "Module 1: "+state.c1+"/"+state.m1.length+" correct · "+
+      "Module 2: "+state.c2+"/"+state.m2.length+" correct · "+
+      (state.c1+state.c2)+"/"+(state.m1.length+state.m2.length)+" total";
+    buildReview();
+  }
+
+  function answerDisplay(item){
+    return item.type==="mcq" ? item.correct_answer : item.correct_answer;
+  }
+
+  function buildReview(){
+    var box=$("review"); box.innerHTML="";
+    [["Module 1",state.m1],["Module 2 ("+(state.path==="hard"?"harder":"easier")+")",state.m2]].forEach(function(pairs){
+      var title=pairs[0], uids=pairs[1];
+      var h=document.createElement("h2"); h.textContent=title; h.style.margin="18px 4px 4px";
+      box.appendChild(h);
+      uids.forEach(function(uid,i){
+        var item=q(uid);
+        var your=state.answers[uid];
+        var correct=E.checkAnswer(item,your);
+        var card=document.createElement("div"); card.className="rev";
+        var yourTxt = (your===undefined||String(your).trim()==="") ? "(no answer)" : your;
+        var head='<div class="tag">'+(i+1)+'. '+item.domain+' · '+item.difficulty+' · '+(item.type==="mcq"?"Multiple choice":"Fill-in")+'</div>';
+        var stemHtml='<div class="stem" style="font-size:1rem;margin-top:6px">'+(item.stem||"")+'</div>';
+        var choiceHtml="";
+        if(item.type==="mcq"){
+          choiceHtml='<div class="choices" style="margin-top:10px">'+
+            (item.choices||[]).map(function(c){
+              var isKey=String(c.letter).toUpperCase()===String(item.correct_answer).toUpperCase();
+              var isYour=your===c.letter;
+              var cls="choice"+(isKey?" sel":"");
+              var mark=isKey?" ✓":(isYour&&!isKey?" ✗ (your answer)":"");
+              return '<div class="'+cls+'"><div class="ltr">'+c.letter+'</div><div class="grow">'+c.html+mark+'</div></div>';
+            }).join("")+'</div>';
+        }
+        var verdict = correct
+          ? '<div class="ans correct">Correct — your answer: '+escapeHtml(String(yourTxt))+'</div>'
+          : '<div class="ans wrong">Incorrect — your answer: '+escapeHtml(String(yourTxt))+'</div>'+
+            '<div class="ans key">Correct answer: '+escapeHtml(String(item.correct_answer))+'</div>';
+        var expl='<details class="expl"><summary>Explanation</summary><div class="stem" style="font-size:.97rem;margin-top:8px">'+(item.rationale||"(no explanation provided)")+'</div></details>';
+        card.innerHTML=head+stemHtml+choiceHtml+verdict+expl;
+        stripSR(card);
+        box.appendChild(card);
+        typeset(card);
+      });
+    });
+  }
+
+  function escapeHtml(s){ return s.replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+  $("btnRestart").onclick=function(){ clearSave(); location.reload(); };
+  $("btnToggleReview").onclick=function(){ $("review").classList.toggle("hide"); };
+
+  // ---------- screen mgmt ----------
+  function hideAll(){
+    ["screen-start","screen-q","screen-break","screen-results","bar"].forEach(hide);
+  }
+
+})();
+</script>
+</body>
+</html>
