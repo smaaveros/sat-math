@@ -68,6 +68,12 @@ from a CDN). The 459 older questions render their math and figures as embedded i
 a screen-reader text transcript (`.sr-only`); the app strips it from the visible question
 since the graph itself is shown.
 
+**Practice by topic:** from the home page, students can also drill a single domain (Algebra,
+Advanced Math, Problem-Solving & Data Analysis, or Geometry & Trigonometry) — 22 questions
+ordered easy to hard, untimed or on a 35-minute clock. Scored by number correct and percentage
+(not the 200–800 scale, which only applies to the full mixed adaptive test), with the same full
+solution review.
+
 **Infinite practice:** each run randomly samples 44 questions from the 1,753-question bank
 by the composition above, so tests stay varied for a long time. State lives in the browser
 tab only (a refresh resumes the current test; closing the tab clears it).

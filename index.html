@@ -28,6 +28,9 @@
   .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
   .btn-primary:hover{background:var(--accent-d);border-color:var(--accent-d)}
   .btn-ghost{background:transparent}
+  .mode-btn{padding:6px 12px}
+  .mode-btn.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+  .topic-btn{text-align:left}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .spread{justify-content:space-between}
   .grow{flex:1}
@@ -125,6 +128,24 @@
     </div>
   </section>
 
+  <!-- PRACTICE BY TOPIC -->
+  <section id="screen-topic" class="card hide">
+    <h2>Practice by topic</h2>
+    <p class="muted small">22 questions from a single domain, ordered easy to hard. Scored by number
+       correct (not the 200–800 scale — that only applies to the full adaptive test). Full solutions after.</p>
+    <div class="row" style="margin:12px 0">
+      <span class="small muted">Mode:</span>
+      <button id="modeUntimed" class="mode-btn sel">Untimed</button>
+      <button id="modeTimed" class="mode-btn">Timed · 35 min</button>
+    </div>
+    <div class="row">
+      <button class="btn-ghost topic-btn" data-domain="Algebra">Algebra</button>
+      <button class="btn-ghost topic-btn" data-domain="Advanced Math">Advanced Math</button>
+      <button class="btn-ghost topic-btn" data-domain="Problem-Solving and Data Analysis">Problem-Solving &amp; Data Analysis</button>
+      <button class="btn-ghost topic-btn" data-domain="Geometry and Trigonometry">Geometry &amp; Trigonometry</button>
+    </div>
+  </section>
+
   <!-- QUESTION -->
   <section id="screen-q" class="card hide">
     <div class="qmeta">
@@ -168,7 +189,7 @@
   <!-- RESULTS -->
   <section id="screen-results" class="hide">
     <div class="card center">
-      <div class="muted small">Your SAT Math score</div>
+      <div class="muted small" id="resLabel">Your SAT Math score</div>
       <div class="score-big" id="resScore">—</div>
       <div class="score-cap">
         <span id="resPath" class="badge">—</span>
@@ -224,7 +245,15 @@
   function clearSave(){ try{ sessionStorage.removeItem(SKEY); }catch(e){} }
   function load(){ try{ var s=sessionStorage.getItem(SKEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
 
-  function curModuleUids(){ return state.phase==="module2" ? state.m2 : state.m1; }
+  function curModuleUids(){
+    if(state.phase==="topic") return state.tq;
+    return state.phase==="module2" ? state.m2 : state.m1;
+  }
+  function shortDomain(d){
+    if(d==="Problem-Solving and Data Analysis") return "Problem-Solving & Data";
+    if(d==="Geometry and Trigonometry") return "Geometry & Trig";
+    return d;
+  }
   function q(uid){ return byId[uid]; }
 
   // ---------- boot ----------
@@ -233,6 +262,7 @@
     pool.forEach(function(it){ byId[it.uid]=it; });
     $("loadStatus").classList.add("hide");
     show("startBody");
+    show("screen-topic");
     $("poolInfo").textContent = pool.length + " questions loaded · "+
       (data.meta && data.meta.source ? data.meta.source : "");
     var saved = load();
@@ -252,6 +282,7 @@
     clearSave();
     var sim = E.buildSimulation(pool);
     state = {
+      mode:"full",
       phase:"module1",
       m1: sim.module1.map(function(x){return x.uid;}),
       m2: null,
@@ -268,16 +299,56 @@
   function resumeRun(){
     state = load();
     if(!state){ beginNewRun(); return; }
-    if(state.phase==="module1"||state.phase==="module2"){ enterModule(); }
+    if(state.phase==="topic"){ enterTopic(); }
+    else if(state.phase==="module1"||state.phase==="module2"){ enterModule(); }
     else if(state.phase==="break"){ enterBreak(); }
     else { beginNewRun(); }
+  }
+
+  // ---------- topic practice ----------
+  var topicTimed = false;
+  $("modeUntimed").onclick = function(){ topicTimed=false; $("modeUntimed").classList.add("sel"); $("modeTimed").classList.remove("sel"); };
+  $("modeTimed").onclick = function(){ topicTimed=true; $("modeTimed").classList.add("sel"); $("modeUntimed").classList.remove("sel"); };
+  Array.prototype.forEach.call(document.querySelectorAll(".topic-btn"), function(b){
+    b.onclick = function(){ startTopic(b.getAttribute("data-domain")); };
+  });
+
+  function startTopic(domain){
+    if(!pool.length) return;
+    clearSave();
+    var qs = E.buildTopicPractice(pool, domain, 22);
+    state = {
+      mode:"topic", phase:"topic", topicDomain:domain, timed:topicTimed,
+      tq: qs.map(function(x){return x.uid;}),
+      answers:{}, current:0,
+      timerEnd: topicTimed ? Date.now()+MODULE_SECONDS*1000 : null,
+      tCorrect:null
+    };
+    save();
+    enterTopic();
+  }
+
+  function enterTopic(){
+    hideAll();
+    show("bar"); show("screen-q");
+    $("barLabel").textContent = "Practice · " + shortDomain(state.topicDomain);
+    $("btnSubmitModule").textContent = "Submit practice";
+    if(state.timed){
+      show("timer");
+      if(!state.timerEnd || state.timerEnd < Date.now()) state.timerEnd = Date.now()+MODULE_SECONDS*1000;
+      startTimer(function(){ submitModule(true); });
+    } else {
+      hide("timer"); stopTimer();
+    }
+    renderQuestion();
   }
 
   // ---------- module flow ----------
   function enterModule(){
     hideAll();
-    show("bar"); show("screen-q");
+    show("bar"); show("screen-q"); show("timer");
     $("barLabel").textContent = state.phase==="module2" ? "Module 2" : "Module 1";
+    $("btnSubmitModule").textContent = "Submit module";
     if(!state.timerEnd || state.timerEnd < Date.now()){
       // restored after expiry or fresh
       if(!state.timerEnd) state.timerEnd = Date.now()+MODULE_SECONDS*1000;
@@ -366,6 +437,13 @@
 
   function submitModule(auto){
     stopTimer();
+    if(state.phase==="topic"){
+      state.tCorrect = countCorrect(state.tq);
+      state.phase = "results";
+      save();
+      enterResults();
+      return;
+    }
     if(state.phase==="module1"){
       state.c1 = countCorrect(state.m1);
       state.path = E.routePath(state.c1);
@@ -437,6 +515,21 @@
   // ---------- results ----------
   function enterResults(){
     stopTimer(); hideAll(); show("screen-results");
+
+    if(state.mode==="topic"){
+      var total=state.tq.length, pct=Math.round(state.tCorrect/total*100);
+      $("resLabel").textContent = "Practice · " + shortDomain(state.topicDomain);
+      $("resScore").textContent = pct + "%";
+      var pe=$("resPath"); pe.className="badge"; pe.textContent = state.tCorrect + " of " + total + " correct";
+      $("resBreakdown").textContent = state.timed ? "Timed practice (35 min)" : "Untimed practice";
+      $("resPathNote").textContent = "Single-topic practice isn't scored on the 200–800 scale — that applies to the full adaptive test.";
+      $("btnRestart").textContent = "Back to home";
+      buildReview();
+      return;
+    }
+
+    $("resLabel").textContent = "Your SAT Math score";
+    $("btnRestart").textContent = "Start a new simulation";
     $("resScore").textContent = state.score;
     var pathEl=$("resPath");
     if(state.path==="hard"){
@@ -461,7 +554,10 @@
 
   function buildReview(){
     var box=$("review"); box.innerHTML="";
-    [["Module 1",state.m1],["Module 2 ("+(state.path==="hard"?"harder":"easier")+")",state.m2]].forEach(function(pairs){
+    var groups = state.mode==="topic"
+      ? [["Practice · "+shortDomain(state.topicDomain), state.tq]]
+      : [["Module 1",state.m1],["Module 2 ("+(state.path==="hard"?"harder":"easier")+")",state.m2]];
+    groups.forEach(function(pairs){
       var title=pairs[0], uids=pairs[1];
       var h=document.createElement("h2"); h.textContent=title; h.style.margin="18px 4px 4px";
       box.appendChild(h);
@@ -504,7 +600,7 @@
 
   // ---------- screen mgmt ----------
   function hideAll(){
-    ["screen-start","screen-q","screen-break","screen-results","bar"].forEach(hide);
+    ["screen-start","screen-topic","screen-q","screen-break","screen-results","bar"].forEach(hide);
   }
 
 })();

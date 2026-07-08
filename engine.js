@@ -100,6 +100,40 @@
     return buildModule(pool, path === "hard" ? s.hard : s.easy, used, rng);
   }
 
+  // ---- single-topic (domain) practice ----
+  function topicSpec(count) {
+    var e = Math.round(count * 0.36);
+    var m = Math.round(count * 0.32);
+    var h = count - e - m;
+    return { Easy: e, Medium: m, Hard: h };
+  }
+
+  // Sample `count` questions from ONE domain, ordered Easy -> Medium -> Hard.
+  function buildTopicPractice(pool, domain, count, rng) {
+    rng = rng || Math.random;
+    count = count || 22;
+    var spec = topicSpec(count);
+    var used = new Set();
+    var out = [];
+    DIFFS.forEach(function (diff) {
+      var need = spec[diff] || 0;
+      if (!need) return;
+      var cell = pool.filter(function (q) {
+        return q.domain === domain && q.difficulty === diff && !used.has(q.uid);
+      });
+      cell = shuffle(cell, rng).slice(0, need);
+      cell.forEach(function (q) { used.add(q.uid); out.push(q); });
+    });
+    if (out.length < count) {
+      var rest = pool.filter(function (q) {
+        return q.domain === domain && !used.has(q.uid);
+      });
+      rest = shuffle(rest, rng).slice(0, count - out.length);
+      rest.forEach(function (q) { used.add(q.uid); out.push(q); });
+    }
+    return out;
+  }
+
   // ---- routing ----
   function routePath(correctModule1) {
     return correctModule1 >= routingThreshold() ? "hard" : "easy";
@@ -183,6 +217,8 @@
     buildModule: buildModule,
     buildSimulation: buildSimulation,
     buildSecondModule: buildSecondModule,
+    topicSpec: topicSpec,
+    buildTopicPractice: buildTopicPractice,
     routePath: routePath,
     scoreSection: scoreSection,
     checkAnswer: checkAnswer,
