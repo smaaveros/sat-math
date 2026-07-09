@@ -28,8 +28,10 @@
   .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
   .btn-primary:hover{background:var(--accent-d);border-color:var(--accent-d)}
   .btn-ghost{background:transparent}
-  .mode-btn{padding:6px 12px}
-  .mode-btn.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+  .seg{display:inline-flex;background:#eef2f7;border:1px solid var(--line);border-radius:999px;padding:3px}
+  .seg-opt{border:none;background:transparent;border-radius:999px;padding:6px 16px;color:var(--muted);font-weight:600;font-size:.9rem}
+  .seg-opt:hover{border:none;background:transparent;color:var(--ink)}
+  .seg-opt.sel{background:#fff;color:var(--accent-d);box-shadow:0 1px 2px rgba(20,40,70,.14)}
   .topic-btn{text-align:left}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .spread{justify-content:space-between}
@@ -135,8 +137,10 @@
        correct (not the 200–800 scale — that only applies to the full adaptive test). Full solutions after.</p>
     <div class="row" style="margin:12px 0">
       <span class="small muted">Mode:</span>
-      <button id="modeUntimed" class="mode-btn sel">Untimed</button>
-      <button id="modeTimed" class="mode-btn">Timed · 35 min</button>
+      <div class="seg" role="group" aria-label="Practice mode">
+        <button id="modeUntimed" class="seg-opt sel">Untimed</button>
+        <button id="modeTimed" class="seg-opt">Timed · 35 min</button>
+      </div>
     </div>
     <div class="row">
       <button class="btn-ghost topic-btn" data-domain="Algebra">Algebra</button>
