@@ -32,7 +32,10 @@
   .seg-opt{border:none;background:transparent;border-radius:999px;padding:6px 16px;color:var(--muted);font-weight:600;font-size:.9rem}
   .seg-opt:hover{border:none;background:transparent;color:var(--ink)}
   .seg-opt.sel{background:#fff;color:var(--accent-d);box-shadow:0 1px 2px rgba(20,40,70,.14)}
-  .topic-btn{text-align:left}
+  .topic-opt{border:1px solid var(--line);background:#fff}
+  .topic-opt.sel{border-color:var(--accent);background:#eef3ff;color:var(--accent-d);box-shadow:inset 0 0 0 1px var(--accent)}
+  button:disabled{opacity:.5;cursor:default}
+  button:disabled:hover{border-color:var(--line)}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .spread{justify-content:space-between}
   .grow{flex:1}
@@ -142,11 +145,16 @@
         <button id="modeTimed" class="seg-opt">Timed · 35 min</button>
       </div>
     </div>
-    <div class="row">
-      <button class="btn-ghost topic-btn" data-domain="Algebra">Algebra</button>
-      <button class="btn-ghost topic-btn" data-domain="Advanced Math">Advanced Math</button>
-      <button class="btn-ghost topic-btn" data-domain="Problem-Solving and Data Analysis">Problem-Solving &amp; Data Analysis</button>
-      <button class="btn-ghost topic-btn" data-domain="Geometry and Trigonometry">Geometry &amp; Trigonometry</button>
+    <div class="small muted" style="margin-top:6px">Choose a domain</div>
+    <div class="row" style="margin-top:8px">
+      <button class="topic-opt" data-domain="Algebra">Algebra</button>
+      <button class="topic-opt" data-domain="Advanced Math">Advanced Math</button>
+      <button class="topic-opt" data-domain="Problem-Solving and Data Analysis">Problem-Solving &amp; Data Analysis</button>
+      <button class="topic-opt" data-domain="Geometry and Trigonometry">Geometry &amp; Trigonometry</button>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn-primary" id="btnStartTopic" disabled>Start topic practice</button>
+      <span class="small muted" id="topicHint">Pick a domain to begin.</span>
     </div>
   </section>
 
@@ -310,12 +318,22 @@
   }
 
   // ---------- topic practice ----------
-  var topicTimed = false;
-  $("modeUntimed").onclick = function(){ topicTimed=false; $("modeUntimed").classList.add("sel"); $("modeTimed").classList.remove("sel"); };
-  $("modeTimed").onclick = function(){ topicTimed=true; $("modeTimed").classList.add("sel"); $("modeUntimed").classList.remove("sel"); };
-  Array.prototype.forEach.call(document.querySelectorAll(".topic-btn"), function(b){
-    b.onclick = function(){ startTopic(b.getAttribute("data-domain")); };
+  var topicTimed = false, selectedTopic = null;
+  function updTopicHint(){
+    if(selectedTopic) $("topicHint").textContent = "Ready: " + shortDomain(selectedTopic) + " · " + (topicTimed ? "Timed 35 min" : "Untimed");
+  }
+  $("modeUntimed").onclick = function(){ topicTimed=false; $("modeUntimed").classList.add("sel"); $("modeTimed").classList.remove("sel"); updTopicHint(); };
+  $("modeTimed").onclick = function(){ topicTimed=true; $("modeTimed").classList.add("sel"); $("modeUntimed").classList.remove("sel"); updTopicHint(); };
+  Array.prototype.forEach.call(document.querySelectorAll(".topic-opt"), function(b){
+    b.onclick = function(){
+      selectedTopic = b.getAttribute("data-domain");
+      Array.prototype.forEach.call(document.querySelectorAll(".topic-opt"), function(x){ x.classList.remove("sel"); });
+      b.classList.add("sel");
+      $("btnStartTopic").disabled = false;
+      updTopicHint();
+    };
   });
+  $("btnStartTopic").onclick = function(){ if(selectedTopic) startTopic(selectedTopic); };
 
   function startTopic(domain){
     if(!pool.length) return;
